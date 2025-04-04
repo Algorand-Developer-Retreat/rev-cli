@@ -50,32 +50,80 @@ class CLI < Thor
             puts "Fetching contracts for project ID: #{project_id}"
             # Define the API endpoint for a specific project
             api_url = URI("http://localhost:3000/api/v1/contracts/project/#{project_id}")
+            
+            begin
+                # Make the API request
+                response = Net::HTTP.get_response(api_url)
+                
+                # Check if the response was successful
+                if response.is_a?(Net::HTTPSuccess)
+                    # Parse the JSON response
+                    contracts_data = JSON.parse(response.body)
+                    
+                    # Display only name, app_id and version for each contract
+                    puts "Contracts for project #{project_id}:"
+                    puts "---------------------------------"
+                    
+                    if contracts_data.empty?
+                        puts "No contracts found for this project."
+                    else
+                        contracts_data.each do |contract|
+                            name = contract["name"] || "Unnamed contract"
+                            app_id = contract["app_id"] || "N/A"
+                            version = contract["version"] || "N/A"
+                            
+                            puts "#{name} - App ID: #{app_id}, Version: #{version}"
+                        end
+                        
+                        puts "---------------------------------"
+                        puts "Total contracts: #{contracts_data.length}"
+                    end
+                    
+                    puts "Fetch complete!"
+                else
+                    puts "Error: API returned status code #{response.code}"
+                    puts response.body
+                end
+            rescue => e
+                puts "Error: Failed to connect to the API - #{e.message}"
+            end
         else
-            puts "Fetching contracts for all projects"
+            puts "Fetching projects summary..."
             # Define the API endpoint for all projects
             api_url = URI("http://localhost:3000/api/v1/projects")
-        end
-        
-        begin
-            # Make the API request
-            response = Net::HTTP.get_response(api_url)
             
-            # Check if the response was successful
-            if response.is_a?(Net::HTTPSuccess)
-                # Parse the JSON response
-                contract_data = JSON.parse(response.body)
+            begin
+                # Make the API request
+                response = Net::HTTP.get_response(api_url)
                 
-                # Display the response
-                puts "Contract information:"
-                puts JSON.pretty_generate(contract_data)
-                
-                puts "Fetch complete!"
-            else
-                puts "Error: API returned status code #{response.code}"
-                puts response.body
+                # Check if the response was successful
+                if response.is_a?(Net::HTTPSuccess)
+                    # Parse the JSON response
+                    projects_data = JSON.parse(response.body)
+                    
+                    # Display only name, abbreviation and number of contracts for each project
+                    puts "Projects summary:"
+                    puts "-----------------"
+                    
+                    projects_data.each do |project|
+                        # Assuming the API returns an array of project objects with these fields
+                        # Adjust field names if they're different in your actual API response
+                        name = project["name"] || "Unnamed project"
+                        abbr = project["abbreviation"] || "N/A"
+                        contracts_count = project["contract_count"] 
+                        
+                        puts "#{name} (#{abbr}) - #{contracts_count} contracts"
+                    end
+                    
+                    puts "-----------------"
+                    puts "Total projects: #{projects_data.length}"
+                else
+                    puts "Error: API returned status code #{response.code}"
+                    puts response.body
+                end
+            rescue => e
+                puts "Error: Failed to connect to the API - #{e.message}"
             end
-        rescue => e
-            puts "Error: Failed to connect to the API - #{e.message}"
         end
     end
 end
